@@ -81,6 +81,43 @@
 
 
 
+--группировка и оконные функции
+
+-- USE TSQLV4;
+-- SELECT COUNT(*) AS numorders
+-- FROM Sales.Orders;
+
+-- SELECT shipperid, YEAR(shippeddate) as shippedyear,
+--         COUNT(1) as numorders
+-- FROM Sales.Orders
+-- WHERE shippeddate IS NOT NULL
+-- GROUP BY shipperid, YEAR(shippeddate)
+-- HAVING COUNT(1) < 100
+
+-- SELECT shipperid,
+--         COUNT(*) AS numorders,
+--         COUNT(shippeddate) AS shippedorders,
+--         MIN(shippeddate) AS firstshipdate,
+--         MAX(shippeddate) AS lastshipdate,
+--         SUM(val) AS totalvalue
+-- FROM Sales.OrderValues
+-- GROUP BY shipperid;
+
+-- SELECT shipperid, COUNT(DISTINCT shippeddate) AS numshippingdates
+-- FROM Sales.Orders
+-- GROUP BY shipperid;
+
+SELECT shipperid, YEAR(shippeddate) AS shipyear, COUNT(*) AS numorders
+FROM Sales.Orders
+WHERE shippeddate IS NOT NULL
+GROUP BY GROUPING SETS
+(
+    ( shipperid, YEAR(shippeddate)),
+    ( shipperid ),
+    ( YEAR(shippeddate) ),
+    ( )
+); 
+
 -- Задачи
 
 -- SELECT empid, CONCAT(firstname, ' ', lastname) as FullName, YEAR(birthdate) as birthyear
@@ -89,3 +126,18 @@
 -- SELECT productid, FORMAT(productid, 'd10')
 -- FROM Production.Products
 -- ORDER BY productid
+
+-- https://leetcode.com/problems/combine-two-tables/description/
+-- SELECT firstName, lastName, city, state FROM Person
+-- LEFT JOIN Address
+-- ON Person.personId = Address.personId
+
+-- https://leetcode.com/problems/replace-employee-id-with-the-unique-identifier/description/
+-- SELECT EmployeeUNI.unique_id, Employees.name
+-- FROM EmployeeUNI
+-- RIGHT JOIN Employees
+-- ON EmployeeUNI.id = Employees.id
+
+-- https://leetcode.com/problems/invalid-tweets/description/
+-- SELECT tweet_id from Tweets
+-- WHERE LEN(content) > 15
