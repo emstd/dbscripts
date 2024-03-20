@@ -83,3 +83,39 @@
 --     SELECT MAX(JT2.JEs) FROM JoinedTable AS JT2
 --     WHERE JT1.JDId = JT2.JDId
 -- )
+
+
+
+-- В этом задании вам нужно указать строки, которые появляются в од-
+-- ной таблице, но не имеют соответствий в другой. Вам поставлена задача возвра-
+-- тить ID сотрудников из таблицы HR.Employees, которые не обрабатывали заказы
+-- (в таблице Sales.Orders) 12 февраля 2015 г. Напишите три разных решения, ис-
+-- пользуя соединения, подзапросы и операторы работы с наборами. Обрабатывали сотрудники id=3 и id=8 в дату 2015/02/12
+
+-- 1)
+-- SELECT Emp.empid FROM HR.Employees as Emp
+--      LEFT JOIN 
+--         (
+--            SELECT empid, orderid FROM Sales.Orders
+--            WHERE orderdate = '2015/02/12'
+--         )
+--         AS emps
+
+--             ON Emp.empid = emps.empid
+-- WHERE orderid IS NULL
+
+
+-- 2)
+-- WITH emps AS
+-- (
+--     SELECT empid FROM Sales.Orders
+--     WHERE orderdate = '2015/02/12'
+-- )
+-- SELECT empid FROM HR.Employees
+--     WHERE empid NOT IN (SELECT * FROM emps)
+
+-- 3)
+-- SELECT empid FROM HR.Employees
+-- EXCEPT
+-- SELECT empid FROM Sales.Orders
+--     WHERE orderdate = '2015/02/12'

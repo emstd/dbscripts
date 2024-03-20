@@ -204,4 +204,3 @@
 
 -- IF OBJECT_ID('Production.GetTopProducts', 'IF') IS NOT NULL
 -- DROP FUNCTION Production.GetTopProducts;
-
