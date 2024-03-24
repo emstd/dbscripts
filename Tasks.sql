@@ -119,3 +119,39 @@
 -- EXCEPT
 -- SELECT empid FROM Sales.Orders
 --     WHERE orderdate = '2015/02/12'
+
+
+
+-- Напишите запрос к представлению Sales.OrderValues, который возвращает для
+-- каждого клиента и заказа значение скользящего среднего для трех последних заказов клиента.
+
+-- SELECT custid, orderid, orderdate, val,
+-- AVG(val) OVER
+--     (
+--         PARTITION BY custid
+--         ORDER BY orderdate, orderid
+--         ROWS BETWEEN 2 PRECEDING
+--             AND CURRENT ROW
+--     ) AS valavg
+-- FROM Sales.OrderValues
+-- Здесь скользящее среднее - значение val заказа и двух предыдущих заказов, то есть valavg для N-го заказа считается как среднее от N, N-1, N-2 в рамках окна
+
+
+-- напишите запрос к таблице Sales.Orders и отфильтруйте три заказа с наибольшим значением затрат на транспортировку по
+-- каждому грузоотправителю, используя orderid в качестве критерия отбора. 
+
+WITH C as 
+(
+    SELECT shipperid, orderid, freight, 
+    ROW_NUMBER() OVER 
+                (
+                    PARTITION BY shipperid
+                    ORDER BY freight DESC, orderid
+                ) 
+                AS rownum
+    FROM Sales.Orders
+)
+SELECT shipperid, orderid, freight
+FROM C
+WHERE rownum < 3
+ORDER BY shipperid, rownum;
