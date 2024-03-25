@@ -4,6 +4,15 @@
 -- SELECT COUNT(*) AS numorders
 -- FROM Sales.Orders;
 
+-- SELECT shipperid, COUNT(*) AS numorders
+-- FROM Sales.Orders
+-- GROUP BY shipperid;
+
+-- SELECT shipperid, YEAR(shippeddate) AS shippedyear,
+-- COUNT(*) AS numorders
+-- FROM Sales.Orders
+-- GROUP BY shipperid, YEAR(shippeddate);
+
 -- SELECT shipperid, YEAR(shippeddate) as shippedyear,
 --         COUNT(1) as numorders
 -- FROM Sales.Orders
@@ -24,6 +33,16 @@
 -- FROM Sales.Orders
 -- GROUP BY shipperid;
 
+
+
+--Наборы группирования
+
+
+-- Оператор GROUPING SETS указывает несколько наборов группирования. То есть результат аналогичен 4м разным запросам с GROUP BY,
+-- а затем их объединению с помощью UNION ALL в одну таблицу. Если в наборе группирования нет атрибута, который указан в SELECT - 
+-- этот атрибут примет значение NULL, например ( shipperid ) указан один в GROUP BY GROUPING SETS, для этой группы YEAR(shippeddate)
+-- рассматривается как NULL. GROUPING SETS более эффективно оптимизурется, чем разные запросы с группировкой и последующим объединенем
+
 --SELECT shipperid, YEAR(shippeddate) AS shipyear, COUNT(*) AS numorders
 --FROM Sales.Orders
 --WHERE shippeddate IS NOT NULL
@@ -36,8 +55,83 @@
 --);
 
 
+-- Оператор CUBE. Определяем один раз столбцы, а группировка прозойдет по всем возможным вариантам комбинирования этих столбцов, то есть:
+-- 1) ( shipperid, YEAR(shippeddate)), 2) ( shipperid ), 3) ( YEAR(shippeddate) ), 4) () пустые скобки
+
+-- SELECT shipperid, YEAR(shippeddate) AS shipyear, COUNT(*) AS numorders
+-- FROM Sales.Orders
+-- WHERE shippeddate IS NOT NULL
+-- GROUP BY CUBE(shipperid, YEAR(shippeddate));
+
+
+-- ROLLUP. Группирует иерархически: 1) сначала группирует одинаковые shipcountry, shipregion, shipcity
+--                                     и вычисляет COUNT(*) AS numorders дли этих групп
+
+--                                  2) группирует одинаковые shipcountry, shipregion
+--                                     и вычисляет COUNT(*) AS numorders дли этих групп
+
+--                                  3) группирует одинаковые shipcountry
+--                                     и вычисляет COUNT(*) AS numorders дли этих групп
+
+--                                  4) вычисляет COUNT(*) AS numorders для всей таблицы
+
+-- SELECT shipcountry, shipregion, shipcity, COUNT(*) AS numorders
+-- FROM Sales.Orders
+-- GROUP BY ROLLUP(shipcountry, shipregion, shipcity);
+
+
+-- Функция GROUPING принимает единственный элемент на вход и возвращает 0, если
+-- этот элемент входит в состав набора группирования, и 1 — когда не входит в него.
+-- SELECT
+-- shipcountry, GROUPING(shipcountry) AS grpcountry,
+-- shipregion , GROUPING(shipregion) AS grpregion,
+-- shipcity , GROUPING(shipcity) AS grpcity,
+-- COUNT(*) AS numorders
+-- FROM Sales.Orders
+-- GROUP BY ROLLUP(shipcountry, shipregion, shipcity);
+
+
+-- Сведение данных. Группируем из таблицы всех покупателей по custid в строки, в стобцах запашиваем конкретных поставщиков с ID: [1], [2], [3], а на пересечении
+-- ID покупателей и ID поставщиков просим применить агрегатную функцию SUM по столбцу freight и получить суммарную стоимость досатвки для каждого клиента у каждого поставщика.
+-- Мы заранее должнызнать, какие отличающиеся значения находятся в распределяющем столбце, и указать их в предложении IN
+
+-- WITH PivotData AS
+-- (
+--     SELECT 
+--         custid,     -- группирующий столбец     (строки)
+--         shipperid, -- распределяющий столбец   (столбцы)
+--         freight     -- агрегатный столбец       (атрибут, к которому применяется агрегатная функция)
+--     FROM Sales.Orders
+-- )
+-- SELECT custid, [1], [2], [3]        -- 1, 2, 3 - конкретные значения ID поставщиков
+-- FROM PivotData
+-- PIVOT 
+--     (
+--         SUM(freight) FOR shipperid IN ([1], [2], [3])
+--     ) AS P;
+
+-- В операторе PIVOT не используется группирующий столбец, используются только shipperid и freight, а ГРУППИРУЮЩИЙ указан неявно из таблицы PivorData методом исключения. Поэтому если не делать
+-- табличное выражение с тремя столбцами, а срзу запросить у базовой таблицы с 3+ столбцов, то группировка будет происходит по всем столбцам. Например:
+
+-- SELECT custid, [1], [2], [3]
+-- FROM Sales.Orders
+-- PIVOT(SUM(freight) FOR shipperid IN ([1],[2],[3])) AS P;    -- Получим все 830 строк на каждый заказ, без группировки по по custid.
+--                                                                Но определив табличное выражение WITH как в примере выше, мы можем контролировать по какому столбцу группировать данные
+
+
+
 
 -- Статистические оконные функции
+
+-- SELECT custid, orderid, val,
+-- SUM(val) OVER(PARTITION BY custid) AS custtotal, -- вывести сумму атрибута val для каждого id клиента
+-- SUM(val) OVER() AS grandtotal                    -- вывести сумму атрубута val для всех клиентов таблицы
+-- FROM Sales.OrderValues;
+
+-- SELECT custid, orderid, val,
+-- CAST(100.0 * val / SUM(val) OVER(PARTITION BY custid) AS NUMERIC(5, 2)) AS pctcust,  -- можно использовать SUM() к окну данных и использовать в выражении
+-- CAST(100.0 * val / SUM(val) OVER() AS NUMERIC(5, 2)) AS pcttotal
+-- FROM Sales.OrderValues;
 
 --SUM(val) здесь применяется к окну одинаковых custid, в каждом окне данные сортируются по дате. Значение runningtotal является суммой всех предыдущих значений
 -- val в окне по отношению к текущей строке.

@@ -122,6 +122,43 @@
 
 
 
+
+-- Напишите запрос PIVOT к таблице Sales.Orders, который возвращает максималь-
+-- ную дату отгрузки для каждого года заказа, а также ID грузоотправителя. Нужно
+-- возвратить годы в строках, ID грузоотправителей (1, 2 и 3) в столбцах и макси-
+-- мальную дату отгрузки в части данных.
+
+-- WITH PivotData as
+-- (
+--     SELECT YEAR(orderdate) as orderyear,
+--     shipperid,
+--     shippeddate
+--     FROM Sales.Orders
+-- )
+-- SELECT orderyear, [1], [2], [3]
+--     FROM PivotData
+--     PIVOT 
+--     (
+--         MAX(shippeddate) FOR shipperid IN ([1], [2], [3])
+--     ) 
+--     AS P;
+
+-- Напишите запрос PIVOT, который возвращает одну строку для каждого отлично-
+-- го ID клиента, столбец для каждого отличного ID грузоотправителя и подсчет
+-- заказов на пересечении "клиент — грузоотправитель"
+
+-- WITH PivotData AS 
+-- (
+--     SELECT custid, shipperid, 1 AS aggcol
+--     FROM Sales.Orders
+-- )
+-- SELECT custid, [1], [2], [3]
+-- FROM PivotData
+-- PIVOT (COUNT(aggcol) FOR shipperid IN ([1], [2], [3]) )  AS P;
+
+
+
+
 -- Напишите запрос к представлению Sales.OrderValues, который возвращает для
 -- каждого клиента и заказа значение скользящего среднего для трех последних заказов клиента.
 
@@ -137,21 +174,23 @@
 -- Здесь скользящее среднее - значение val заказа и двух предыдущих заказов, то есть valavg для N-го заказа считается как среднее от N, N-1, N-2 в рамках окна
 
 
+
+
 -- напишите запрос к таблице Sales.Orders и отфильтруйте три заказа с наибольшим значением затрат на транспортировку по
 -- каждому грузоотправителю, используя orderid в качестве критерия отбора. 
 
-WITH C as 
-(
-    SELECT shipperid, orderid, freight, 
-    ROW_NUMBER() OVER 
-                (
-                    PARTITION BY shipperid
-                    ORDER BY freight DESC, orderid
-                ) 
-                AS rownum
-    FROM Sales.Orders
-)
-SELECT shipperid, orderid, freight
-FROM C
-WHERE rownum < 3
-ORDER BY shipperid, rownum;
+-- WITH C as 
+-- (
+--     SELECT shipperid, orderid, freight, 
+--     ROW_NUMBER() OVER 
+--                 (
+--                     PARTITION BY shipperid
+--                     ORDER BY freight DESC, orderid
+--                 ) 
+--                 AS rownum
+--     FROM Sales.Orders
+-- )
+-- SELECT shipperid, orderid, freight
+-- FROM C
+-- WHERE rownum < 3
+-- ORDER BY shipperid, rownum;
