@@ -155,3 +155,97 @@
 --         WHERE categoryname > @categoryname);
 --     END;
 -- GO
+
+
+
+-- WAITFOR. может вызывать паузу в выполнении инструкции на определенный период времени.
+
+-- WAITFOR DELAY '00:00:20';    -- Останавливает выполнение кода на 20 секунд
+-- WAITFOR TIME '23:46:00';     -- Приостанавливает выполнение кода до указанного времени (Тут до 23 часов 46 минут 00 секунд)
+
+
+
+-- GOTO. Позволяет перепрыгнуть на определенную метку. Тут вторая инструкция PRINT пропускается
+
+-- PRINT 'First PRINT statement';
+-- GOTO MyLabel;
+-- PRINT 'Second PRINT statement';
+-- MyLabel:
+-- PRINT 'End';
+
+
+
+-- Процедуры могут посылать обратно более одного результирующего набора
+-- IF OBJECT_ID('Sales.ListSampleResultsSets', 'P') IS NOT NULL
+--  DROP PROC Sales.ListSampleResultsSets;
+-- GO
+-- CREATE PROC Sales.ListSampleResultsSets
+-- AS
+-- BEGIN
+--     SELECT TOP (1) productid, productname, supplierid,
+--         categoryid, unitprice, discontinued
+--     FROM Production.Products;
+--     SELECT TOP (1) orderid, productid, unitprice, qty, discount
+--     FROM Sales.OrderDetails;
+-- END
+-- GO                                                   -- Создали процедуру, возвращающую 2 набора по одной строке (результат функции TOP())
+
+-- EXEC Sales.ListSampleResultsSets                     -- Вызываем эту процедуру
+
+
+
+
+
+
+
+-- В этом задании вам нужно разработать хранимую процедуру для создания резервной копии базы данных. Сначала вы создадите сценарий и цикл WHILE, 
+-- а затем постепенно будете усовершенствовать код, чтобы в конечном итоге создать хранимую процедуру с параметром, указывающим тип базы данных, для которой нужно
+-- создать резервную копию
+
+IF OBJECT_ID('dbo.BackupDatabases', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.BackupDatabases;
+GO
+
+CREATE PROCEDURE dbo.BackupDatabases
+    @databasetype AS NVARCHAR(30)
+AS
+BEGIN
+    DECLARE @databasename AS NVARCHAR(128),
+            @timecomponent AS NVARCHAR(50),
+            @sqlcommand AS NVARCHAR(1000);
+
+    IF @databasetype NOT IN ('User', 'System')
+    BEGIN
+        THROW 50000, 'dbo.BackupDatabases: @databasetype must be User or System', 0;
+        RETURN;
+    END;
+
+    IF @databasetype = 'System'
+        SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name IN ('master', 'model', 'msdb'));
+    ELSE
+        SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb'));
+
+    WHILE @databasename IS NOT NULL
+    BEGIN
+        SET @timecomponent = REPLACE(REPLACE(REPLACE(CONVERT(NVARCHAR, GETDATE(), 120), ' ', '_'), ':', ''), '-', '');
+        SET @sqlcommand = 'BACKUP DATABASE ' + @databasename + ' TO DISK = ''C:\Backups\' + @databasename + '_' + @timecomponent + '.bak''';
+        PRINT @sqlcommand;
+        --EXEC(@sqlcommand);
+        IF @databasetype = 'System'
+            SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name IN ('master', 'model', 'msdb') AND name > @databasename);
+        ELSE
+            SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb') AND name > @databasename);
+    END;
+
+    RETURN;
+END;
+GO
+
+
+
+
+
+
+
+
+-- Из (2024-03-28 22:42:51) получится (20240328_224143)
