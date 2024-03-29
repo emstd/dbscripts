@@ -202,50 +202,50 @@
 -- а затем постепенно будете усовершенствовать код, чтобы в конечном итоге создать хранимую процедуру с параметром, указывающим тип базы данных, для которой нужно
 -- создать резервную копию
 
-IF OBJECT_ID('dbo.BackupDatabases', 'P') IS NOT NULL
-    DROP PROCEDURE dbo.BackupDatabases;
-GO
+-- IF OBJECT_ID('dbo.BackupDatabases', 'P') IS NOT NULL
+--     DROP PROCEDURE dbo.BackupDatabases;
+-- GO
 
-CREATE PROCEDURE dbo.BackupDatabases
-    @databasetype AS NVARCHAR(30)
-AS
-BEGIN
-    DECLARE @databasename AS NVARCHAR(128),
-            @timecomponent AS NVARCHAR(50),
-            @sqlcommand AS NVARCHAR(1000);
+-- CREATE PROCEDURE dbo.BackupDatabases
+--     @databasetype AS NVARCHAR(30)       -- Входной парметр процедуры (какого типа БД будет бэкапить - системные(4 штуки) или пользовательские)
+-- AS
+-- BEGIN
+--     DECLARE @databasename AS NVARCHAR(128),     -- название базы данных
+--             @timecomponent AS NVARCHAR(50),     -- время созданя бэкапа (укажется в названии бэкапа)
+--             @sqlcommand AS NVARCHAR(1000);      -- сама команда, которая будет создавать бэкап БД
 
-    IF @databasetype NOT IN ('User', 'System')
-    BEGIN
-        THROW 50000, 'dbo.BackupDatabases: @databasetype must be User or System', 0;
-        RETURN;
-    END;
+--     IF @databasetype NOT IN ('User', 'System')  -- если передали тип БД не системный и не пользовательский, то генеируем исключение
+--     BEGIN
+--         THROW 50000, 'dbo.BackupDatabases: @databasetype must be User or System', 0;
+--         RETURN;
+--     END;
 
-    IF @databasetype = 'System'
-        SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name IN ('master', 'model', 'msdb'));
-    ELSE
-        SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb'));
+--     IF @databasetype = 'System'     -- Тут берем "минимальное" название БД либо для типа System, либо для типа User's
+--         SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name IN ('master', 'model', 'msdb', 'tempdb'));
+--     ELSE
+--         SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb'));
 
-    WHILE @databasename IS NOT NULL
-    BEGIN
-        SET @timecomponent = REPLACE(REPLACE(REPLACE(CONVERT(NVARCHAR, GETDATE(), 120), ' ', '_'), ':', ''), '-', '');
-        SET @sqlcommand = 'BACKUP DATABASE ' + @databasename + ' TO DISK = ''C:\Backups\' + @databasename + '_' + @timecomponent + '.bak''';
-        PRINT @sqlcommand;
-        --EXEC(@sqlcommand);
-        IF @databasetype = 'System'
-            SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name IN ('master', 'model', 'msdb') AND name > @databasename);
-        ELSE
-            SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb') AND name > @databasename);
-    END;
+--     WHILE @databasename IS NOT NULL     -- Пробегаем по всем БД заданного типа (системные или пользовательские)
+--     BEGIN
+--         SET @timecomponent = REPLACE(REPLACE(REPLACE(CONVERT(NVARCHAR, GETDATE(), 120), ' ', '_'), ':', ''), '-', '');      -- Например, из (2024-03-28 22:42:51) получится (20240328_224143) это будет в названии бэкапа
+--         SET @sqlcommand = 'BACKUP DATABASE ' + @databasename + ' TO DISK = ''C:\Backups\' + @databasename + '_' + @timecomponent + '.bak''';    -- Сама SQL команда для создания бэкапа
+--         PRINT @sqlcommand;  -- Выведем ее в сообщения
+--         -- EXEC(@sqlcommand);   -- раскомментировать, если хочется выполнить команду бэкапа, иначе она просто выводится в сообщения
+--         IF @databasetype = 'System'     -- Если были указаны во вх. параметре системные, то берем следующую по списку после "минимальной", так же для пользовательских БД 
+--             SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name IN ('master', 'model', 'msdb', 'tempdb') AND name > @databasename);
+--         ELSE
+--             SET @databasename = (SELECT MIN(name) FROM sys.databases WHERE name NOT IN ('master', 'model', 'msdb', 'tempdb') AND name > @databasename);
+--     END;
+-- END;
+-- GO
 
-    RETURN;
-END;
-GO
+-- Протестируем процедуру, созданную выше.
+-- EXEC dbo.BackupDatabases;   -- тут будет ошибка, так как не передан входной параметр
+-- GO
+-- EXEC dbo.BackupDatabases 'User';    -- выполнит бэкап пользовательских БД
+-- GO
+-- EXEC dbo.BackupDatabases 'System';  -- выполнит бэкап системных БД
+-- GO
+-- EXEC dbo.BackupDatabases 'Unknown'  -- будет ошибка, так как ожидается входной параметр 'User' или 'System'
 
 
-
-
-
-
-
-
--- Из (2024-03-28 22:42:51) получится (20240328_224143)
